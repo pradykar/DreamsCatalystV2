@@ -1,0 +1,58 @@
+{
+  "home": {
+    "title": "DreamsCatalyst - Mika L. Stratton",
+    "description": "来访或新到湾区？通过有趣而实用的对话学习英语、建立自信，同时享受当地游学与文化探索。"
+  },
+  "esl": {
+    "title": "ESL",
+    "description": "湾区 ESL 语言与文化辅导。个性化一对一英语、会话、自信提升与跨文化辅导。"
+  },
+  "esl-tours-field-trips": {
+    "title": "ESL 游学与实地考察",
+    "description": "湾区英语沉浸式游学与实地考察。调动五感进行实用学习，自然而然地掌握英语与美国文化。"
+  },
+  "esl-professional-services": {
+    "title": "ESL 专业服务",
+    "description": "面向商务人士的高管 ESL 辅导，提升沟通技巧，了解企业文化。"
+  },
+  "women-centered-coaching": {
+    "title": "女性专属辅导",
+    "description": "女性专属 ESL 与文化辅导。提升英语自信，学习在美国生活所需的语言与文化。"
+  },
+  "esl-corporate-partners": {
+    "title": "ESL 企业合作伙伴",
+    "description": "了解 DreamsCatalyst 的 ESL 企业合作！强化企业合作与员工辅导，促进有效沟通与成长。"
+  },
+  "esl-immigration-partners": {
+    "title": "ESL 移民合作伙伴",
+    "description": "ESL 移民服务，帮助您的客户掌握在新社区取得成功所需的语言技能。"
+  },
+  "esl-faqs": {
+    "title": "ESL 常见问题",
+    "description": "通过跨文化辅导和丰富的实地考察学习，探索 ESL 语言辅导，实现您的语言目标！"
+  },
+  "custom-tutoring-coaching": {
+    "title": "定制辅导/教练",
+    "description": "需要学生辅导服务？联系 Mika，了解都柏林和普莱森顿及周边地区上门辅导或您选择地点的辅导方案。"
+  },
+  "about-us": {
+    "title": "关于我们",
+    "description": "通过跨文化辅导促进专业与个人成长的 ESL 辅导服务，释放您的潜能。"
+  },
+  "real-estate": {
+    "title": "房地产",
+    "description": "旧金山湾区专业房地产服务。与 Mika L. Stratton 一起进行个性化咨询，实现您的房地产梦想。"
+  },
+  "esl-misc-expat-services": {
+    "title": "ESL-其他外籍人士服务",
+    "description": "探索湾区英语沉浸式游学，提供个性化辅导、文化实地考察和难忘体验。"
+  },
+  "esl-special-services": {
+    "title": "ESL-特别服务",
+    "description": "探索 ESL 特别服务，包括高管辅导和语言辅导，提升语言技能、实现目标。"
+  },
+  "true-north-ai": {
+    "title": "True North AI",
+    "description": "连接多元信仰与多元语言视角的工具。探索发人深省名言的历史与文化背景。"
+  }
+}

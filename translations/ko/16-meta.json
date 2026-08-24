@@ -1,0 +1,58 @@
+{
+  "home": {
+    "title": "DreamsCatalyst - Mika L. Stratton",
+    "description": "베이 에어리어에 방문 중이거나 새로 오셨나요? 재미있고 실용적인 대화를 통해 영어를 배우고 자신감을 키우면서, 지역 투어와 문화 탐험도 즐겨보세요."
+  },
+  "esl": {
+    "title": "ESL",
+    "description": "베이 에어리어 ESL 언어 & 문화 코칭. 개인 맞춤 1:1 영어 수업, 회화, 자신감 향상, 크로스컬처 코칭."
+  },
+  "esl-tours-field-trips": {
+    "title": "ESL 투어 & 현장 학습",
+    "description": "베이 에어리어 영어 몰입 투어와 현장 학습. 오감을 활용한 실용적인 학습으로 영어와 미국 문화를 자연스럽게 익혀보세요."
+  },
+  "esl-professional-services": {
+    "title": "ESL 전문 서비스",
+    "description": "비즈니스 전문가를 위한 임원 ESL 코칭. 커뮤니케이션 스킬을 향상시키고 기업 문화를 이해하세요."
+  },
+  "women-centered-coaching": {
+    "title": "여성 중심 코칭",
+    "description": "여성을 위한 ESL & 문화 코칭. 영어 자신감을 키우고 미국 생활에 필요한 언어와 문화를 배우세요."
+  },
+  "esl-corporate-partners": {
+    "title": "ESL 기업 파트너",
+    "description": "DreamsCatalyst의 ESL 기업 파트너십을 만나보세요! 효과적인 커뮤니케이션과 성장을 위한 기업 파트너십과 직원 코칭을 강화하세요."
+  },
+  "esl-immigration-partners": {
+    "title": "ESL 이민 파트너",
+    "description": "고객이 새로운 지역사회에서 성공하는 데 필요한 언어 스킬을 갖추도록 돕는 ESL 이민 서비스."
+  },
+  "esl-faqs": {
+    "title": "ESL 자주 묻는 질문",
+    "description": "크로스컬처 코칭과 풍성한 현장 학습을 통해 언어 목표를 달성하는 ESL 언어 코칭을 알아보세요!"
+  },
+  "custom-tutoring-coaching": {
+    "title": "맞춤 과외/코칭",
+    "description": "학생 과외 서비스가 필요하신가요? 더블린과 플레전턴 및 주변 지역에서 가정 방문 또는 원하시는 장소의 과외 옵션을 Mika와 상담해 보세요."
+  },
+  "about-us": {
+    "title": "소개",
+    "description": "크로스컬처 코칭을 통한 전문성·개인 성장에 맞춘 ESL 코칭 서비스로 잠재력을 펼쳐보세요."
+  },
+  "real-estate": {
+    "title": "부동산",
+    "description": "샌프란시스코 베이 에어리어 전문 부동산 서비스. Mika L. Stratton과 함께 부동산 꿈을 이루기 위한 맞춤 상담을 받아보세요."
+  },
+  "esl-misc-expat-services": {
+    "title": "ESL-기타 해외 거주자 서비스",
+    "description": "맞춤형 코칭, 문화 현장 학습, 잊지 못할 경험을 제공하는 베이 에어리어 영어 몰입 투어를 만나보세요."
+  },
+  "esl-special-services": {
+    "title": "ESL-특별 서비스",
+    "description": "임원 과외와 언어 코칭을 포함한 ESL 특별 서비스를 통해 언어 실력을 향상시키고 목표를 달성하세요."
+  },
+  "true-north-ai": {
+    "title": "True North AI",
+    "description": "다양한 신앙과 언어의 관점을 잇는 도구. 의미 있는 명언의 역사적·문화적 맥락을 탐구하세요."
+  }
+}

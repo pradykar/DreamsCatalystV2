@@ -1,0 +1,58 @@
+{
+  "home": {
+    "title": "DreamsCatalyst - Mika L. Stratton",
+    "description": "ベイエリアに訪れた方も、新しく住み始めた方も。楽しく実用的な会話で英語を学び、自信を育てながら、ローカルツアーと文化探訪をお楽しみください。"
+  },
+  "esl": {
+    "title": "ESL",
+    "description": "ベイエリアのESL言語＆カルチャーコーチング。個別対応の1対1英語、会話、自信向上、異文化コーチング。"
+  },
+  "esl-tours-field-trips": {
+    "title": "ESLツアー＆フィールドトリップ",
+    "description": "ベイエリアの英語イマージョンツアーとフィールドトリップ。五感を使った実践的な学びで、英語とアメリカ文化を自然に身につけましょう。"
+  },
+  "esl-professional-services": {
+    "title": "ESLプロフェッショナルサービス",
+    "description": "ビジネスパーソンのためのエグゼクティブESLコーチング。コミュニケーションスキルを高め、企業文化を理解しましょう。"
+  },
+  "women-centered-coaching": {
+    "title": "女性のためのコーチング",
+    "description": "女性のためのESL＆カルチャーコーチング。英語の自信を育て、アメリカでの生活に必要な言語と文化を学びましょう。"
+  },
+  "esl-corporate-partners": {
+    "title": "ESL法人パートナー",
+    "description": "DreamsCatalystのESL法人パートナーシップ！効果的なコミュニケーションと成長のための法人パートナーシップと従業員コーチングを強化しましょう。"
+  },
+  "esl-immigration-partners": {
+    "title": "ESL移民パートナー",
+    "description": "クライアントが新しいコミュニティで成功するために必要な言語スキルを身につけるESL移民サービス。"
+  },
+  "esl-faqs": {
+    "title": "ESLよくある質問",
+    "description": "異文化コーチングと充実したフィールドトリップで言語目標を達成するESL言語コーチングを探求しましょう！"
+  },
+  "custom-tutoring-coaching": {
+    "title": "カスタム個別指導／コーチング",
+    "description": "学生向け個別指導サービスが必要ですか？ダブリンとプレザントン周辺のご自宅またはご希望の場所での個別指導について、ミカにご相談ください。"
+  },
+  "about-us": {
+    "title": "私たちについて",
+    "description": "異文化コーチングによる専門的・個人的な成長に合わせたESLコーチングサービスで、あなたの可能性を解き放ちましょう。"
+  },
+  "real-estate": {
+    "title": "不動産",
+    "description": "サンフランシスコベイエリアの専門不動産サービス。Mika L. Strattonとともに、不動産の夢をかなえるための個別相談を受けましょう。"
+  },
+  "esl-misc-expat-services": {
+    "title": "ESL-その他の駐在員向けサービス",
+    "description": "個別対応のコーチング、カルチャーフィールドトリップ、忘れられない体験を提供するベイエリア英語イマージョンツアー。"
+  },
+  "esl-special-services": {
+    "title": "ESL-特別サービス",
+    "description": "エグゼクティブ個別指導と言語コーチングを含むESL特別サービスで、言語スキルを高め目標を達成しましょう。"
+  },
+  "true-north-ai": {
+    "title": "True North AI",
+    "description": "多宗教・多言語の視点をつなぐツール。意味のある名言の歴史的・文化的背景を探求しましょう。"
+  }
+}
