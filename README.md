@@ -14,31 +14,37 @@ required at deploy time). Ready for GitHub + Cloudflare Pages.
 ## Structure
 
 ```
-site/
-├── index.html                    EN home
-├── esl/                          EN pages (original slugs)
-├── ko/  ja/  zh/                 translated pages (clean slugs)
+docs/                           published site (GitHub Pages branch deploy from /docs)
+├── index.html                  EN home
+├── esl/                        EN pages (original slugs)
+├── ko/  ja/  zh/               translated pages (clean slugs)
 │   └── esl/
 │       └── index.html
-├── manifest.webmanifest          self-hosted PWA manifest
-├── TRANSLATION-NOTES.md          adaptation decisions + scope findings
-└── QA-CHECKLIST.md               per-language/per-page verification
+├── manifest.webmanifest        self-hosted PWA manifest
+├── TRANSLATION-NOTES.md        adaptation decisions + scope findings
+└── QA-CHECKLIST.md             per-language/per-page verification
 ```
+
+> Note: the publishable site lives in `docs/` so GitHub Pages can deploy it
+> directly from the `main` branch (no CI workflow needed). `build.py` regenerates
+> `docs/` from `source/` + `translations/`.
 
 ## Regenerating the site
 
 ```bash
-python3 build.py    # reads source/*.html + translations/<lang>/*.json -> site/
+python3 build.py    # reads source/*.html + translations/<lang>/*.json -> docs/
 ```
 
 Requires: python3, beautifulsoup4.
 
-## Deploy (Cloudflare Pages)
+## Deploy (GitHub Pages)
 
-- No build command required; publish directory = `site/` (repo root).
-- Preview deployments on the PR branch work out of the box (`*.pages.dev`).
-- Domain cutover to dreamscatalyst.com is a separate future task (this phase
-  does not touch GoDaddy DNS/hosting).
+- Repo: https://github.com/pradykar/DreamsCatalyst
+- GitHub Pages publishes `docs/` from `main` (branch deploy — no build command,
+  no Actions workflow).
+- Live URL: `https://pradykar.github.io/DreamsCatalyst/`
+- Internal links are relative, so the site also works at a domain root
+  (e.g. after future DNS cutover to dreamscatalyst.com).
 
 ## Language switcher & SEO
 

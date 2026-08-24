@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup, NavigableString
 
 BASE = '/home/prady/dreamscatalyst'
 SRC = f'{BASE}/source'
-OUT = f'{BASE}/site'
+OUT = f'{BASE}/docs'   # GitHub Pages publishes /docs from main (branch deploy, no workflow)
 
 # slug mapping: source filename -> (english original slug dir, clean slug)
 PAGES = [

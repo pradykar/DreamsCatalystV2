@@ -1,7 +1,7 @@
 # QA Checklist — DreamsCatalyst Multilingual Clone
 
 Verified per language per page. All checks below were executed programmatically
-against the built `site/` output (56 pages: 14 EN + 14 KO + 14 JA + 14 ZH), plus
+against the built `docs/` output (56 pages: 14 EN + 14 KO + 14 JA + 14 ZH), plus
 a real-browser (headless Chrome) render of representative pages.
 
 Legend: ✅ passed · ⚠️ known deviation (documented)
@@ -107,7 +107,7 @@ Legend: ✅ passed · ⚠️ known deviation (documented)
 
 ## 9. Build reproducibility
 
-- ✅ `build.py` regenerates the entire `site/` deterministically from
+- ✅ `build.py` regenerates the entire `docs/` deterministically from
   `source/*.html` + `translations/<lang>/*.json` (56 pages).
 - ✅ Source HTML captured 2026-08-21 from live site (GoDaddy Website Builder 8.0.0).
 
