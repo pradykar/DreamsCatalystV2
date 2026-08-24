@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup, NavigableString
 
 BASE = '/home/prady/dreamscatalyst'
 SRC = f'{BASE}/source'
-OUT = f'{BASE}/site'
+OUT = f'{BASE}/docs'   # GitHub Pages publishes /docs from main (branch deploy, no workflow)
 
 # slug mapping: source filename -> (english original slug dir, clean slug)
 PAGES = [
@@ -257,10 +257,39 @@ def build_page(name, html, lang, en_slug):
     # ---- booking/account buttons keep working (translated) ----
     return str(soup), changed
 
+def relativize(out_dir):
+    """Convert root-absolute internal paths (/esl/, /ko/esl/, /manifest.webmanifest)
+    to relative paths so the site works under any base path (e.g. GitHub Pages
+    /DreamsCatalyst/). Leaves absolute URLs (https://..., //cdn, tel:, mailto:)
+    untouched. hreflang/canonical absolute URLs stay absolute by design."""
+    import urllib.parse as up
+    for f in glob.glob(f'{out_dir}/**/index.html', recursive=True) + [f'{out_dir}/index.html']:
+        if not os.path.exists(f):
+            continue
+        html = open(f, encoding='utf-8').read()
+        rel_dir = os.path.relpath(os.path.dirname(f), out_dir)
+        depth = 0 if rel_dir == '.' else len(rel_dir.split(os.sep))
+        prefix = '../' * depth
+
+        def rel(m):
+            val = m.group(2)
+            if val.startswith(('http://', 'https://', '//', 'tel:', 'mailto:', '#', 'data:')):
+                return m.group(0)
+            if not val.startswith('/'):
+                return m.group(0)
+            return f'{m.group(1)}="{prefix}{val.lstrip("/")}"'
+
+        html = re.sub(r'(href|src|action|poster)="(/[^"]*)"', rel, html)
+        open(f, 'w', encoding='utf-8').write(html)
+
+
 def main():
     if os.path.exists(OUT):
         shutil.rmtree(OUT)
     os.makedirs(OUT)
+
+    # GitHub Pages: skip Jekyll processing
+    open(f'{OUT}/.nojekyll', 'w').write('')
 
     # self-hosted static assets (manifest etc.)
     if os.path.exists(f'{BASE}/static/manifest.webmanifest'):
@@ -290,6 +319,9 @@ def main():
     for name, langs in summary.items():
         print(f"{name:35s} " + "  ".join(f"{k}:{v} nodes" for k, v in langs.items()))
     print("\nTotal pages written: 14 EN + 14x3 translated =", 14 + 14 * 3)
+
+    relativize(OUT)
+    print("Relative-link pass complete (portable to any base path).")
 
 if __name__ == '__main__':
     main()
