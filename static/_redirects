@@ -1,0 +1,10 @@
+# Cloudflare Pages redirects (other hosts ignore this file)
+# Old GoDaddy account / booking pages no longer exist
+/m/*                        /          302
+/esl/ola/*                  /esl/      302
+# GoDaddy starter-template page, unpublished
+/esl-special-services       /esl/      301
+/esl-special-services/      /esl/      301
+/ko/esl-special-services/   /ko/esl/   301
+/ja/esl-special-services/   /ja/esl/   301
+/zh/esl-special-services/   /zh/esl/   301

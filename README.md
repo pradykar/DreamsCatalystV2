@@ -1,4 +1,4 @@
-# DreamsCatalyst — Multilingual Static Site
+# DreamsCatalystV2 — Multilingual Static Site
 
 A faithful static clone of [dreamscatalyst.com](https://www.dreamscatalyst.com)
 (GoDaddy Website Builder) with four language versions:
@@ -57,3 +57,18 @@ Requires: python3, beautifulsoup4.
 Booking & account buttons point to the live GoDaddy site
 (`https://www.dreamscatalyst.com/m/...`) so bookings keep working — see
 TRANSLATION-NOTES.md §2 for the rationale and how to switch to mailto stubs.
+
+## V2 maintenance notes (Oct 2026)
+
+- Repo: https://github.com/pradykar/DreamsCatalystV2 (working copy; the original
+  pradykar/DreamsCatalyst is frozen and still feeds the current live deploy).
+- Build: `python3 build.py` is the ONLY build step. It regenerates `docs/`
+  (published tree) and mirrors it byte-identically into `site/`.
+  Edit `source/*.html`, `translations/**`, `static/**` only — never docs/ or site/.
+- Sanitization: build.py strips the dead GoDaddy runtime and resolves lazy media at
+  build time; `static/assets/site.js` provides menu, FAQ accordion and contact form.
+- Contact form: set `FORM_ENDPOINT` at the top of build.py (e.g. a Formspree URL).
+  While empty, the form composes a pre-filled email to mika@dreamscatalyst.com.
+- Owner assets (logo/photos/fonts) are self-hosted in `static/assets/`
+  (`tools/asset-map.json` documents the mapping); GoDaddy stock photos remain
+  remote pending the licensing decision.

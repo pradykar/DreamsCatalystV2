@@ -1,27 +1,42 @@
 #!/usr/bin/env python3
-"""Build multilingual static clone of dreamscatalyst.com.
+"""Build the multilingual static DreamsCatalyst site.
 
-Reads the 14 captured GoDaddy source pages (source/*.html), applies the
+Reads the captured GoDaddy source pages (source/*.html), applies the
 translation dicts (translations/<lang>/*.json), injects a language switcher,
-hreflang tags, and rewrites internal links, then writes:
+hreflang/canonical tags, rewrites internal links, and REPLACES the dead
+GoDaddy runtime (its scripts on img1.wsimg.com return HTTP 503):
+  - lazy images/backgrounds are resolved at build time
+  - dead widgets (reviews, appointments, popup, chat, cookie banner, logos,
+    html embed) and GoDaddy scripts/branding are removed
+  - /assets/site.js provides the hamburger menu, FAQ accordion, contact form
 
-  site/                         English baseline (original slugs, +switcher/hreflang only)
-  site/ko/...  site/ja/...  site/zh/...   (clean slugs)
-
-Text-node strategy:
-  - exact match against translation dict
-  - if the node text is a strict prefix of exactly one dict key (a "Show More"
-    collapsed preview), use that key's translation truncated to the same ratio
-Everything else (classes, inline styles, structure, images, JS) is preserved.
+Writes:
+  docs/                         English baseline (original slugs)
+  docs/ko/ docs/ja/ docs/zh/    translated pages (clean slugs)
+  docs/sitemap.xml + everything in static/ (assets, 404 pages, robots, _redirects)
+  site/                         exact mirror of docs/ (host may publish either)
 """
 import json, os, re, shutil, glob
+from urllib.parse import quote, unquote
 from bs4 import BeautifulSoup, NavigableString
 
-BASE = '/home/prady/dreamscatalyst'
-SRC = f'{BASE}/source'
-OUT = f'{BASE}/docs'   # GitHub Pages publishes /docs from main (branch deploy, no workflow)
+NL = chr(10)
 
-# slug mapping: source filename -> (english original slug dir, clean slug)
+BASE = os.path.dirname(os.path.abspath(__file__))
+SRC = f'{BASE}/source'
+OUT = f'{BASE}/docs'   # published folder
+MIRROR = f'{BASE}/site'  # kept identical to docs/ until the owner confirms which one the host deploys
+
+SITE_URL = 'https://dreamscatalyst.com'
+CONTACT_EMAIL = 'mika@dreamscatalyst.com'
+GA4_ID = 'G-K58NN0SKH0'          # the site's own Google Analytics 4 property
+FORM_ENDPOINT = ''               # e.g. 'https://formspree.io/f/xxxxxxxx'; '' = mailto fallback in site.js
+KEEP_TRUSTEDSITE = True          # re-add the TrustedSite script that lived in the GoDaddy HTML widget
+HERO_CTA_TARGET = '/esl'         # "Get Started" on the home hero (was a link to the home page itself)
+
+# slug mapping: source filename -> (english original slug, clean slug)
+# esl-special-services is intentionally NOT built: it is an untouched GoDaddy
+# starter-template page (redirected to /esl/ via static/_redirects).
 PAGES = [
     ('home',                  '/',                         ''),
     ('esl',                   '/esl',                      'esl'),
@@ -35,7 +50,6 @@ PAGES = [
     ('about-us',              '/about-us',                  'about-us'),
     ('real-estate',           '/real-estate',               'real-estate'),
     ('esl-misc-expat-services','/esl-misc-expat-services',  'esl-misc-expat-services'),
-    ('esl-special-services',  '/esl-special-services',      'esl-special-services'),
     ('true-north-ai',         '/true-north-ai',             'true-north-ai'),
 ]
 NAME2CLEAN = {n: c for n, _, c in PAGES}
@@ -49,19 +63,45 @@ LANG_META = {
 }
 LANGS = ['ko', 'ja', 'zh']
 
-# booking/account/contact links -> live English GoDaddy site (decision: option a)
-M_LINKS = {
-    '/m/account':        'https://www.dreamscatalyst.com/m/account',
-    '/m/bookings':       'https://www.dreamscatalyst.com/m/bookings',
-    '/m/create-account': 'https://www.dreamscatalyst.com/m/create-account',
-    '/m/create':         'https://www.dreamscatalyst.com/m/create',
-    '/m/login':          'https://www.dreamscatalyst.com/m/login',
+DEAD_WIDGETS = ('widget-reviews', 'widget-appointments', 'widget-html', 'widget-logos',
+                'widget-popup', 'widget-messaging', 'widget-cookie-banner')
+
+GA4_SNIPPET = (
+    f'<script async src="https://www.googletagmanager.com/gtag/js?id={GA4_ID}"></script>'
+    '<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}'
+    "gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied'});"
+    f"gtag('js',new Date());gtag('config','{GA4_ID}');</script>"
+)
+
+LOGO_FILE = f'{BASE}/static/assets/img/logo.png'   # created by tools/localize_assets.py
+LOGO_URL = (f'{SITE_URL}/assets/img/logo.png' if os.path.exists(LOGO_FILE) else
+            'https://img1.wsimg.com/isteam/ip/911746c9-a317-4496-9588-e22eee9fc874/DreamsCatalyst_Middle%20Long.png')
+
+LOCAL_BUSINESS = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    '@id': f'{SITE_URL}/#business',
+    'name': 'DreamsCatalyst - Mika L. Stratton',
+    'url': f'{SITE_URL}/',
+    'image': LOGO_URL,
+    'telephone': '+1-408-475-6452',
+    'email': CONTACT_EMAIL,
+    'areaServed': 'San Francisco Bay Area, California, USA',
+    'address': {'@type': 'PostalAddress', 'addressRegion': 'CA', 'addressCountry': 'US'},
+    'sameAs': [
+        'https://www.facebook.com/245039592022998',
+        'https://www.instagram.com/DreamsCatalyst',
+        'https://www.linkedin.com/company/dreamscatalyst/',
+        'https://www.yelp.com/biz/dreamscatalyst-pleasanton-2',
+        'https://www.youtube.com/@DreamsCatalyst',
+    ],
 }
+
 
 def load_translations(lang):
     d = {}
-    for f in glob.glob(f'{BASE}/translations/{lang}/*.json'):
-        d.update(json.load(open(f)))
+    for f in sorted(glob.glob(f'{BASE}/translations/{lang}/*.json')):
+        d.update(json.load(open(f, encoding='utf-8')))
     return d
 
 def truncate_prefix(translation, ratio):
@@ -69,7 +109,6 @@ def truncate_prefix(translation, ratio):
     English collapsed preview, on a word boundary when possible."""
     n = max(1, int(len(translation) * ratio))
     cut = translation[:n]
-    # extend to a natural boundary (space or CJK punctuation) if close
     for sep in (' ', '。', '！', '？', '.', '!', '?', '、', '」', '」', '）', ')', '】'):
         idx = cut.rfind(sep)
         if idx > len(cut) * 0.55:
@@ -80,7 +119,6 @@ def translate_string(s, tdict):
     """Return (translated, matched_exact). Handles collapsed-prefix fallback."""
     if s in tdict:
         return tdict[s], True
-    # strict-prefix fallback: find shortest dict key that starts with s
     cands = [k for k in tdict if len(k) > len(s) and k.startswith(s)]
     if cands:
         best = min(cands, key=len)
@@ -88,11 +126,22 @@ def translate_string(s, tdict):
         return truncate_prefix(tdict[best], ratio), False
     return s, False
 
-def swither_html(cur_dir, clean_slug, en_slug):
-    """Language switcher markup. cur_dir: '' (en) or 'ko'/'ja'/'zh'."""
+def page_url(lang, en_slug, clean_slug):
+    """Absolute URL of a built page, always with a trailing slash, matching the
+    folder build.py writes (so canonical/hreflang never point at a redirect)."""
+    d = LANG_META[lang]['dir']
+    if lang == 'en':
+        path = unquote(en_slug.strip('/'))      # 'custom-tutoring/coaching', 'esl-tours-&-field-trips'
+    else:
+        path = '/'.join(p for p in (d, clean_slug) if p)
+    path = quote(path, safe='/')
+    return f'{SITE_URL}/{path}/' if path else f'{SITE_URL}/'
+
+def switcher_html(cur_dir, clean_slug, en_slug):
+    """Language switcher: a slim static bar at the top of the header (it used to be
+    position:fixed and covered the logo on phones)."""
     def href_for(lang):
         d = LANG_META[lang]['dir']
-        # EN pages live at their original slugs; translated pages at clean slugs
         slug = en_slug if lang == 'en' else clean_slug
         slug = slug.strip('/') if slug != '/' else ''
         if slug == '':
@@ -102,52 +151,35 @@ def swither_html(cur_dir, clean_slug, en_slug):
     for lang in ['en', 'ko', 'ja', 'zh']:
         d = LANG_META[lang]['dir']
         active = (d == cur_dir)
-        style = ('background:#0a636e;color:#fff;' if active
-                 else 'background:transparent;color:#0a636e;')
+        colors = 'background:#0a636e;color:#fff;' if active else 'background:transparent;color:#0a636e;'
+        current = ' aria-current="true"' if active else ''
         links.append(
             f'<a href="{href_for(lang)}" hreflang="{LANG_META[lang]["hreflang"]}" '
-            f'lang="{LANG_META[lang]["lang"]}" style="{style}">{LANG_META[lang]["label"]}</a>'
+            f'lang="{LANG_META[lang]["lang"]}"{current} style="{colors}padding:4px 8px;'
+            f'border-radius:4px;text-decoration:none;">{LANG_META[lang]["label"]}</a>'
         )
-    return ('<div data-ux="Block" id="hermes-lang-switcher" aria-label="Language switcher" '
-            'style="position:fixed;top:10px;right:10px;z-index:999999;display:flex;'
-            'gap:4px;padding:4px;background:rgba(255,255,255,0.92);border:1px solid #0a636e;'
-            'border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);font-family:Arial,sans-serif;'
-            'font-size:13px;font-weight:700;">' + ''.join(links) + '</div>')
+    return ('<nav id="hermes-lang-switcher" aria-label="Language" '
+            'style="position:relative;z-index:2;display:flex;justify-content:flex-end;gap:4px;'
+            'padding:6px 12px;background:#fff;font-family:Arial,sans-serif;font-size:13px;'
+            'font-weight:700;line-height:1;">' + ''.join(links) + '</nav>')
 
-def hreflang_tags(clean_slug, en_slug):
+def hreflang_tags(en_slug, clean_slug):
     tags = []
     for lang in ['en', 'ko', 'ja', 'zh']:
-        d = LANG_META[lang]['dir']
-        slug = en_slug if lang == 'en' else clean_slug
-        slug = slug.strip('/') if slug != '/' else ''
-        if d:
-            href = (f'https://dreamscatalyst.com/{d}/{slug}/' if slug else f'https://dreamscatalyst.com/{d}/')
-        else:
-            href = (f'https://dreamscatalyst.com/{slug}/' if slug else 'https://dreamscatalyst.com/')
-        tags.append(f'<link rel="alternate" hreflang="{LANG_META[lang]["hreflang"]}" href="{href}"/>')
-    tags.append('<link rel="alternate" hreflang="x-default" href="https://dreamscatalyst.com/'
-                + (f'{en_slug.strip("/")}/' if en_slug != '/' else '') + '"/>')
-    return '\n    '.join(tags)
+        tags.append(f'<link rel="alternate" hreflang="{LANG_META[lang]["hreflang"]}" '
+                    f'href="{page_url(lang, en_slug, clean_slug)}"/>')
+    tags.append(f'<link rel="alternate" hreflang="x-default" href="{page_url("en", en_slug, clean_slug)}"/>')
+    return (NL + '    ').join(tags)
 
 def rewrite_href(href, lang):
     """Rewrite an internal href for the language folder. Returns None if
     the href should be left untouched."""
-    if not href:
-        return None
-    # /m/* -> live GoDaddy site (keeps booking/account functional on the static clone)
-    if href.startswith('/m/'):
-        return M_LINKS.get(href, None)
-    # English baseline: only /m/* rewritten; other internal links keep original slugs
-    if lang == 'en':
+    if not href or lang == 'en':
         return None
     if href.startswith(('http://', 'https://', '//', 'tel:', 'mailto:', '#')):
         return None
-    if href.startswith('/m/'):
-        # booking/account -> live GoDaddy site (translated versions only)
-        return M_LINKS.get(href, None)
     if href.startswith('/'):
         slug = href[1:].rstrip('/')
-        # decode %26 / %2F in the english slug
         clean = EN_SLUG2CLEAN.get('/' + slug)
         if clean is None:
             return None
@@ -157,10 +189,108 @@ def rewrite_href(href, lang):
         return f'/{d}/{clean}/' if d else f'/{clean}/'
     return None
 
+def frag(markup):
+    return BeautifulSoup(markup, 'html.parser')
+
+def sanitize(soup):
+    """Remove the dead GoDaddy runtime and do its work at build time.
+    Runs on the English source BEFORE translation (text selectors are English)."""
+    # 1. Lazy images: put the real URLs into src/srcset (GoDaddy JS used to do this)
+    for el in soup.find_all(attrs={'data-srcsetlazy': True}):
+        el['srcset'] = el['data-srcsetlazy']
+        del el['data-srcsetlazy']
+    for img in soup.find_all('img', attrs={'data-srclazy': True}):
+        img['src'] = img['data-srclazy']
+        del img['data-srclazy']
+        if 'transparent_placeholder' in img.get('srcset', ''):
+            del img['srcset']
+        img['loading'] = 'lazy'
+        img['decoding'] = 'async'
+    for el in soup.find_all(attrs={'data-lazyimg': True}):
+        del el['data-lazyimg']
+
+    # 2. Lazy backgrounds: un-hide (.d-none) and give them the parent's height
+    for el in soup.find_all(attrs={'data-lazybg': True}):
+        el['class'] = [c for c in el.get('class', []) if c != 'd-none']
+        style = el.get('style', '').strip().rstrip(';')
+        el['style'] = (style + ';' if style else '') + 'height:100%'
+        del el['data-lazybg']
+
+    # 3. Widgets only GoDaddy's JS could fill -> empty white gaps today
+    had_trustedsite = bool(soup.select('div.widget-html'))
+    for cls in DEAD_WIDGETS:
+        for w in soup.select('div.' + cls):
+            w.decompose()
+
+    # 4. GoDaddy account/bookings UI (/m/* pages no longer exist; drawer shows filler@godaddy.com)
+    for el in soup.select('[data-ux="UtilitiesMenu"], [data-ux="Membership"]'):
+        el.decompose()
+    for a in soup.find_all('a', href=lambda h: bool(h) and (h.startswith('/m/') or 'dreamscatalyst.com/m/' in h)):
+        (a.find_parent('li') or a).decompose()
+
+    # 5. "Powered by GoDaddy Airo" + generator meta
+    for p in soup.select('[data-aid="FOOTER_POWERED_BY_AIRO_RENDERED"]'):
+        cell = p.find_parent(attrs={'data-ux': 'GridCell'}) or p.parent
+        cell.decompose()
+    for m in soup.select('meta[name="generator"]'):
+        m.decompose()
+
+    # 6. Scripts: drop every GoDaddy runtime/tracking script, keep JSON-LD (rewritten)
+    for s in soup.find_all('script'):
+        if s.get('type') == 'application/ld+json':
+            s.string = json.dumps(LOCAL_BUSINESS, ensure_ascii=False)
+        else:
+            s.decompose()
+    soup.head.append(frag(GA4_SNIPPET))
+    if KEEP_TRUSTEDSITE and had_trustedsite:
+        soup.body.append(frag('<script async src="https://cdn.ywxi.net/js/1.js"></script>'))
+    soup.body.append(frag('<script defer src="/assets/site.js"></script>'))
+
+    # 7. Contact form: real field names + endpoint; site.js handles submit
+    for form in soup.select('div.widget-contact form'):
+        form['data-dc-contact'] = ''
+        form['method'] = 'post'
+        form['action'] = FORM_ENDPOINT
+        if FORM_ENDPOINT:
+            form['data-endpoint'] = FORM_ENDPOINT
+        fields = (('CONTACT_FORM_NAME', 'name', {'autocomplete': 'name'}),
+                  ('CONTACT_FORM_EMAIL', 'email', {'type': 'email', 'autocomplete': 'email', 'required': ''}),
+                  ('CONTACT_FORM_MESSAGE', 'message', {}))
+        for aid, name, extra in fields:
+            el = form.find(['input', 'textarea'], attrs={'data-aid': aid})   # the wrapper <div> carries the same data-aid
+            if el:
+                el['name'] = name
+                for k, v in extra.items():
+                    el[k] = v
+        for el in form.select('input[name="_app_id"]'):
+            el.decompose()
+        form.append(frag('<input type="hidden" name="_subject" value="New inquiry from dreamscatalyst.com">'
+                         '<input type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" '
+                         'style="position:absolute;left:-9999px;width:1px;height:1px;">'))
+    for t in soup.find_all(string=re.compile('protected by reCAPTCHA')):
+        p = t.find_parent('p')
+        if p:
+            p.decompose()
+
+    # 8. Template leftovers and dead-end links
+    for p in soup.select('[data-aid="MENU_SECTION_FOOTNOTE_RENDERED"]'):
+        p.decompose()                                   # "Add a footnote if this applies to your business"
+    for a in soup.select('a[data-aid="HEADER_CTA_BTN"]'):
+        a['href'] = HERO_CTA_TARGET                     # "Get Started" pointed at the home page itself
+    for a in soup.select('a[data-aid^="CAT_CARD_LINK_RND_"]'):
+        n = a['data-aid'].rsplit('_', 1)[-1]
+        title = soup.find(attrs={'data-aid': f'FEAT_CAT_TITLE_RND{n}'})
+        if title:
+            a['aria-label'] = title.get_text(' ', strip=True)
+        a.string = ''                                   # accessible name was "#"
+    for a in soup.select('[data-aid="HAMBURGER_MENU_LINK"][toggleid]'):
+        a['aria-controls'] = a['toggleid']
+
 def build_page(name, html, lang, en_slug):
     soup = BeautifulSoup(html, 'html.parser')
+    sanitize(soup)
     tdict = load_translations(lang) if lang != 'en' else {}
-    meta = json.load(open(f'{BASE}/translations/{lang}/16-meta.json')) if lang != 'en' else None
+    meta = json.load(open(f'{BASE}/translations/{lang}/16-meta.json', encoding='utf-8')) if lang != 'en' else None
 
     # ---- <html lang> ----
     html_tag = soup.find('html')
@@ -194,21 +324,24 @@ def build_page(name, html, lang, en_slug):
                 tag['content'] = tdict.get('Enhance Your Confidence / Achieve Your Dreams', tag['content'])
             elif key == 'og:locale':
                 tag['content'] = {'ko': 'ko_KR', 'ja': 'ja_JP', 'zh': 'zh_CN'}[lang]
-        # og:description that is the tagline
         for tag in soup.find_all('meta', property='og:description'):
             tag['content'] = tdict.get('Unlocking Dreams, One Conversation at a Time', tag['content'])
 
-    # ---- hreflang + canonical ----
+    # ---- canonical + og:url point at THIS page (translations are not duplicates of EN) ----
     clean_slug = NAME2CLEAN[name]
+    url = page_url(lang, en_slug, clean_slug)
+    for link in soup.find_all('link', rel='canonical'):
+        link['href'] = url
+    for tag in soup.find_all('meta', property='og:url'):
+        tag['content'] = url
+
+    # ---- hreflang ----
     head = soup.find('head')
     if head:
-        alt = soup.new_tag('meta')
-        head.append(NavigableString('\n    '))
-        # insert hreflang block before </head>
-        hl = BeautifulSoup(hreflang_tags(clean_slug, en_slug), 'html.parser')
-        for node in hl.contents:
+        head.append(NavigableString(NL + '    '))
+        for node in frag(hreflang_tags(en_slug, clean_slug)).contents:
             head.append(node)
-        head.append(NavigableString('\n  '))
+        head.append(NavigableString(NL + '  '))
 
     # ---- translate text nodes ----
     changed = 0
@@ -216,11 +349,7 @@ def build_page(name, html, lang, en_slug):
         if node.parent.name in ('script', 'style', 'title'):
             continue
         s = node.strip()
-        if not s:
-            continue
-        # preserve nbsp
-        norm = s.replace('\u00a0', ' ')
-        if lang == 'en':
+        if not s or lang == 'en':
             continue
         if s in tdict:
             node.replace_with(NavigableString(node.replace(s, tdict[s])))
@@ -228,14 +357,13 @@ def build_page(name, html, lang, en_slug):
         else:
             t, ok = translate_string(s, tdict)
             if ok or t != s:
-                # only replace if we actually translated (avoid prefix noise on short strings)
                 if len(s) >= 4 or s in tdict:
                     node.replace_with(NavigableString(node.replace(s, t)))
                     changed += 1
 
     # ---- attributes: alt, aria-label, originalText ----
     for el in soup.find_all(True):
-        for attr in ('alt', 'aria-label', 'originalText'):
+        for attr in ('alt', 'aria-label', 'originalText', 'placeholder', 'title'):
             v = el.get(attr)
             if not v or lang == 'en':
                 continue
@@ -251,18 +379,14 @@ def build_page(name, html, lang, en_slug):
     # ---- language switcher ----
     header = soup.find('section', attrs={'data-aid': 'HEADER_SECTION'})
     if header:
-        sw = BeautifulSoup(swither_html(LANG_META[lang]['dir'], clean_slug, en_slug), 'html.parser')
-        header.insert(0, sw)
+        header.insert(0, frag(switcher_html(LANG_META[lang]['dir'], clean_slug, en_slug)))
 
-    # ---- booking/account buttons keep working (translated) ----
     return str(soup), changed
 
 def relativize(out_dir):
-    """Convert root-absolute internal paths (/esl/, /ko/esl/, /manifest.webmanifest)
-    to relative paths so the site works under any base path (e.g. GitHub Pages
-    /DreamsCatalyst/). Leaves absolute URLs (https://..., //cdn, tel:, mailto:)
-    untouched. hreflang/canonical absolute URLs stay absolute by design."""
-    import urllib.parse as up
+    """Convert root-absolute internal paths (/esl/, /ko/esl/, /assets/site.js)
+    to relative paths so the site works under any base path. Only index.html
+    pages are rewritten; 404 pages keep root-absolute links on purpose."""
     for f in glob.glob(f'{out_dir}/**/index.html', recursive=True) + [f'{out_dir}/index.html']:
         if not os.path.exists(f):
             continue
@@ -282,31 +406,30 @@ def relativize(out_dir):
         html = re.sub(r'(href|src|action|poster)="(/[^"]*)"', rel, html)
         open(f, 'w', encoding='utf-8').write(html)
 
+def write_sitemap(urls):
+    body = NL.join(f'  <url><loc>{u}</loc></url>' for u in urls)
+    with open(f'{OUT}/sitemap.xml', 'w', encoding='utf-8') as fh:
+        fh.write(NL.join(['<?xml version="1.0" encoding="UTF-8"?>',
+                          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+                          body, '</urlset>', '']))
 
 def main():
     if os.path.exists(OUT):
         shutil.rmtree(OUT)
-    os.makedirs(OUT)
-
-    # GitHub Pages: skip Jekyll processing
+    # static/ holds manifest, assets (site.js, img, fonts), 404 pages, robots.txt, _redirects
+    shutil.copytree(f'{BASE}/static', OUT)
     open(f'{OUT}/.nojekyll', 'w').write('')
 
-    # self-hosted static assets (manifest etc.)
-    if os.path.exists(f'{BASE}/static/manifest.webmanifest'):
-        shutil.copy(f'{BASE}/static/manifest.webmanifest', f'{OUT}/manifest.webmanifest')
-
-    summary = {}
+    summary, urls = {}, []
     for name, en_slug, clean in PAGES:
         html = open(f'{SRC}/{name}.html', encoding='utf-8').read()
 
-        # English baseline: keep original slug dir (URL-decoded name so encoded
-        # requests like /esl-tours-%26-field-trips/ resolve), inject switcher + hreflang only
-        from urllib.parse import unquote
         en_dir_name = unquote(en_slug.lstrip('/'))
         en_dir = (f'{OUT}/{en_dir_name}' if en_slug != '/' else OUT)
         os.makedirs(en_dir, exist_ok=True)
         en_html, _ = build_page(name, html, 'en', en_slug)
         open(f'{en_dir}/index.html', 'w', encoding='utf-8').write(en_html)
+        urls.append(page_url('en', en_slug, clean))
 
         for lang in LANGS:
             d = LANG_META[lang]['dir']
@@ -315,13 +438,20 @@ def main():
             out_html, changed = build_page(name, html, lang, en_slug)
             open(f'{out_dir}/index.html', 'w', encoding='utf-8').write(out_html)
             summary.setdefault(name, {})[lang] = changed
+            urls.append(page_url(lang, en_slug, clean))
 
     for name, langs in summary.items():
         print(f"{name:35s} " + "  ".join(f"{k}:{v} nodes" for k, v in langs.items()))
-    print("\nTotal pages written: 14 EN + 14x3 translated =", 14 + 14 * 3)
+    print(f"Total pages written: {len(PAGES)} EN + {len(PAGES)}x3 translated = {len(PAGES) * 4}")
 
     relativize(OUT)
-    print("Relative-link pass complete (portable to any base path).")
+    write_sitemap(urls)
+    print("Relative-link pass complete; sitemap.xml written.")
+
+    if os.path.exists(MIRROR):
+        shutil.rmtree(MIRROR)
+    shutil.copytree(OUT, MIRROR)
+    print("site/ mirrored from docs/.")
 
 if __name__ == '__main__':
     main()
