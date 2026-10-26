@@ -116,3 +116,11 @@ Legend: ✅ passed · ⚠️ known deviation (documented)
 Signed off: built & verified end-to-end (fetch → translate → build → link check →
 browser render). Remaining external steps: GitHub push + Cloudflare Pages (need
 user credentials/auth).
+
+## V2 site-repair checks (Oct 2026) — run after `python3 build.py`
+1. `find docs -name index.html | wc -l` == 52; `diff -rq docs site` empty; 404s/robots/_redirects/sitemap(52 locs) present.
+2. Leftovers loop (see spec §6.2) prints nothing.
+3. New prices present on both EN price pages and 2 files per language tree.
+4. Canonical self-references with trailing slash on every page incl. translations.
+5. `python3 tools/check_site.py` prints PASS: 19 pages x 2 widths + contact form.
+6. Visual: home tiles show photos; no >200px blank stretches; footer has no "Powered by"; menu lists 11 pages.
